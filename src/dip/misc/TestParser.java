@@ -35,10 +35,10 @@ import dip.process.*;
 import java.util.*;
 import java.io.*;
 import java.lang.reflect.*;
-import jcmdline.*;	
+import jcmdline.*;
 
 /**
-*	A test harness that allows testing of the Order Parser (OrderParser.java). 
+*	A test harness that allows testing of the Order Parser (OrderParser.java).
 *	<p>
 *	<pre>
 *		VARIANT: xxxxxxx
@@ -49,16 +49,16 @@ import jcmdline.*;
 *
 *	Remove(Power power, Location src, Unit.Type srcUnit)
 *	Build(Power power, Location src, Unit.Type srcUnit)
-*	
+*
 *	Disband(Power power, Location src, Unit.Type srcUnit)
 *	Retreat(Power power, Location src, Unit.Type srcUnitType, Location dest)
-*	
+*
 *	Hold(Power power, Location src, Unit.Type srcUnit)
-*	
+*
 *	Move(Power power, Location src, Unit.Type srcUnitType, Location dest, boolean isConvoying)
-*	
+*
 *	Convoy(Power power, Location src, Unit.Type srcUnit, Location convoySrc, Unit.Type convoyUnitType, Location convoyDest)
-*	
+*
 *	Support(Power power, Location src, Unit.Type srcUnit, Location supSrc, Unit.Type supUnit, Location supDest)
 *
 *	Waive(Power power, Location src)
@@ -76,10 +76,10 @@ public class TestParser
 	OrderParser op = null;
 	boolean isLogging = false;	// OrderParser internal logging enabled
 	ValidationOptions valOpts = null;	// validation options
-	
+
 	// constants
 	private static final String VARIANT_DIR				= "variants";
-	
+
 	private static final String KEY_VARIANT 	= "variant";
 	private static final String KEY_SETUP 		= "setup";
 	private static final String KEY_SETUPDISLODGED	= "setupdislodged";
@@ -87,9 +87,9 @@ public class TestParser
 	private static final String KEY_ORDER	 	= "order";
 	private static final String KEY_RESULT	 	= "result";
 	private static final String KEY_COMMENT	 	= "comment";
-	
+
 	// note: order is important; e.g., 'setupdislodged' before 'setup'
-	private static final String KEYWORDS[][] = 
+	private static final String KEYWORDS[][] =
 	{
 		{"variant", KEY_VARIANT},
 		{"setupdislodged", KEY_SETUPDISLODGED},
@@ -101,15 +101,15 @@ public class TestParser
 		{"res", KEY_RESULT},
 		{"#", KEY_COMMENT}
 	};
-	
+
 	// argument type specifiers
 	private static final String T_POWER = "power";
 	private static final String T_LOCATION = "location";
 	private static final String T_UTYPE = "unittype";
 	private static final String T_BOOLEAN = "boolean";
-	
+
 	// order types and their acceptable arguments.
-	private static final String[][] ORDER_ARGS = 
+	private static final String[][] ORDER_ARGS =
 	{
 		// really simple types (2 args)
 		{"waive", T_POWER, T_LOCATION},
@@ -124,30 +124,30 @@ public class TestParser
 		{"convoy", T_POWER, T_LOCATION, T_UTYPE, T_LOCATION, T_UTYPE, T_LOCATION},
 		{"support", T_POWER, T_LOCATION, T_UTYPE, T_LOCATION, T_UTYPE, T_LOCATION},
 	};
-	
+
 	// 3 main phase types for proper validation
 	private static final Phase PHASE_MOVE		= new Phase(SeasonType.FALL, 1900, PhaseType.MOVEMENT);
 	private static final Phase PHASE_ADJUSTMENT	= new Phase(SeasonType.FALL, 1900, PhaseType.ADJUSTMENT);
 	private static final Phase PHASE_RETREAT	= new Phase(SeasonType.FALL, 1900, PhaseType.RETREAT);
-	
-	
+
+
 	/** Start the parser. */
 	public static void main(String args[])
 	{
 		// input file specifier
-		FileParam argInputFile = 
-			new FileParam("input", "the input file of test-case definitions", 
+		FileParam argInputFile =
+			new FileParam("input", "the input file of test-case definitions",
 							FileParam.IS_FILE & FileParam.IS_READABLE & FileParam.EXISTS,
 							FileParam.REQUIRED,
 							FileParam.SINGLE_VALUED);
-		
+
 		// are we logging? or not.
 		BooleanParam logOpt =
 			new BooleanParam("log", "log OrderParser internal processing");
-		
+
 		// verbose help text
-		String helpText	=	" ";	
-		
+		String helpText	=	" ";
+
 		// main command line handler
 		CmdLineHandler cl = new VersionCmdLineHandler(
 			"TestParser 1.0",
@@ -155,20 +155,20 @@ public class TestParser
 				"TestParser",
 				"Test harness for testing order parsing",
 				// options
-				new Parameter[] {argInputFile, logOpt},
+				new jcmdline.Parameter[] {argInputFile, logOpt},
 				// arguments [left on command line]
-				new Parameter[] {}
+				new jcmdline.Parameter[] {}
 			)
 		);
-		
+
 		// parse command line
 		cl.parse(args);
-		
+
 		// Start the parser
 		new TestParser(argInputFile.getFile(), logOpt.isTrue());
 	}// main()
-	
-	
+
+
 	/** Creates a TestParser using the given input file. */
 	private TestParser(File input, boolean isLogging)
 	{
@@ -179,25 +179,25 @@ public class TestParser
 		Log.setLogging(isLogging);
 		runTest();
 	}// TestParser()
-	
-	
+
+
 	/** Test each case and keep stats */
 	private void runTest()
 	{
 		// list of failed case descriptions.
 		int numprocessed = 0;
 		List failedCases = new LinkedList();
-		
-		
+
+
 		// set the validation options; lenient -- we only care about syntax!
 		valOpts = new ValidationOptions();
 		valOpts.setOption(ValidationOptions.KEY_GLOBAL_PARSING, ValidationOptions.VALUE_GLOBAL_PARSING_LOOSE);
-		
+
 		Iterator iter = cases.iterator();
 		while(iter.hasNext())
 		{
 			ORPair orp = (ORPair) iter.next();
-			
+
 			// determine if case is marked with a "FAIL" result line.
 			boolean isMarkedFail = false;
 			String res = orp.getResult().trim().toLowerCase();
@@ -205,14 +205,14 @@ public class TestParser
 			{
 				isMarkedFail = true;
 			}
-			
-			
+
+
 			// First, attempt to parse the order. Guessing is allowed.
 			try
 			{
 				numprocessed++;
 				Order o = op.parse(OrderFactory.getDefault(), orp.getOrder(), null, turnState, false, true);
-				
+
 				// validate order: note that we need to set the phase appropriately
 				// first
 				if(o instanceof Build || o instanceof Remove)
@@ -227,10 +227,10 @@ public class TestParser
 				{
 					turnState.setPhase(PHASE_MOVE);
 				}
-				
+
 				// now, do the validation
 				o.validate(turnState, valOpts, world.getRuleOptions());
-				
+
 				// if marked as fail, and we succeed, it's a failure!
 				if(isMarkedFail)
 				{
@@ -266,15 +266,15 @@ public class TestParser
 				}
 			}
 		}
-		
+
 		// print stats
 		System.out.println(numprocessed+" order(s) parsed");
 		System.out.println(failedCases.size()+" order(s) failed");
-		
+
 		if(failedCases.size() > 0)
 		{
 			System.out.println("\nFailed orders, and failure reasons follow:");
-			
+
 			iter = failedCases.iterator();
 			while(iter.hasNext())
 			{
@@ -282,9 +282,9 @@ public class TestParser
 				System.out.println("");
 			}
 		}
-		
+
 		System.out.println("TestParser completed on "+new Date());
-		
+
 		// clean or error exit
 		if(failedCases.size() > 0)
 		{
@@ -295,12 +295,12 @@ public class TestParser
 			System.exit(0);
 		}
 	}// runTest()
-	
-	
-	/** 
-	*	
-	*	Check the order against what actually should be there. 
-	*	Originally, reflection was to be used but this is much easier, 
+
+
+	/**
+	*
+	*	Check the order against what actually should be there.
+	*	Originally, reflection was to be used but this is much easier,
 	*	though less flexible.
 	*/
 	private void checkORP(ORPair orp, Order o, List failedCases)
@@ -312,7 +312,7 @@ public class TestParser
 			System.out.println("No result type was given.");
 			System.exit(1);
 		}
-		
+
 		// find order.
 		String[] params = null;
 		for(int i=0; i<ORDER_ARGS.length; i++)
@@ -331,7 +331,7 @@ public class TestParser
 				}
 			}
 		}
-		
+
 		// order not found.
 		if(params == null)
 		{
@@ -339,10 +339,10 @@ public class TestParser
 			System.out.println("Order type \""+toks[0]+"\" not found.");
 			System.exit(1);
 		}
-		
+
 		// name
 		String name = toks[0].toLowerCase();
-		
+
 		// validate name
 		if(!name.equalsIgnoreCase(o.getFullName()))
 		{
@@ -360,8 +360,8 @@ public class TestParser
 			failedCases.add(sb.toString());
 			return;
 		}
-		
-		// exception: Waive has 2 parameters; valBasicParam expects 3. 
+
+		// exception: Waive has 2 parameters; valBasicParam expects 3.
 		if(name.equals("waive"))
 		{
 			// validate power, and validate location.
@@ -369,21 +369,21 @@ public class TestParser
 			{
 				return;
 			}
-			
+
 			if(!valLocation(orp, o.getSource(), toks[2], failedCases))
 			{
 			}
-			
+
 			// we are OK
 			return;
 		}
-		
+
 		// validate basic params -- same for all orders
 		if(!valBasicParams(orp, o, toks, failedCases))
 		{
 			return;
 		}
-		
+
 		// validate extended parameters
 		if(name.equals("move"))
 		{
@@ -391,7 +391,7 @@ public class TestParser
 			{
 				return;
 			}
-			
+
 			if(!valBoolean(orp, (((Move) o).isConvoying()), toks[5], failedCases))
 			{
 				return;
@@ -410,12 +410,12 @@ public class TestParser
 			{
 				return;
 			}
-			
+
 			if(!valUnitType(orp, (((Support) o).getSupportedUnitType()), toks[5], failedCases))
 			{
 				return;
 			}
-			
+
 			if(!valLocation(orp, (((Support) o).getSupportedDest()), toks[6], failedCases))
 			{
 				return;
@@ -427,41 +427,41 @@ public class TestParser
 			{
 				return;
 			}
-			
+
 			if(!valUnitType(orp, (((Convoy) o).getConvoyUnitType()), toks[5], failedCases))
 			{
 				return;
 			}
-			
+
 			if(!valLocation(orp, (((Convoy) o).getConvoyDest()), toks[6], failedCases))
 			{
 				return;
 			}
 		}
 	}// checkORP()
-	
-	
+
+
 	/** Validate basic params -- for all orders; always 3 params */
 	private boolean valBasicParams(ORPair orp, Order o, String[] toks, List failedCases)
 	{
 		boolean isOK = valPower(orp, o.getPower(), toks[1], failedCases);
-		
+
 		if(isOK)
 		{
 			isOK = valLocation(orp, o.getSource(), toks[2], failedCases);
 		}
-		
+
 		if(isOK)
 		{
 			isOK = valUnitType(orp, o.getSourceUnitType(), toks[3], failedCases);
 		}
-		
+
 		return isOK;
 	}// valBasicParams()
-	
-	
-	
-	
+
+
+
+
 	/** Validate a Power */
 	private boolean valPower(ORPair orp, Power thePower, String tok, List failedCases)
 	{
@@ -473,7 +473,7 @@ public class TestParser
 			System.out.println("Power \""+tok+"\" not found.");
 			System.exit(1);
 		}
-		
+
 		// does tok match? if not, add to failed cases, return false
 		if(power != thePower)
 		{
@@ -487,11 +487,11 @@ public class TestParser
 			failedCases.add(sb.toString());
 			return false;
 		}
-		
+
 		return true;
 	}// valPower()
-	
-	
+
+
 	/** Validate a Location */
 	private boolean valLocation(ORPair orp, Location theLoc, String tok, List failedCases)
 	{
@@ -503,7 +503,7 @@ public class TestParser
 			System.out.println("Location \""+tok+"\" not found.");
 			System.exit(1);
 		}
-		
+
 		// does tok match? if not, add to failed cases, return false
 		// cannot use identity-equals here
 		if(!loc.equals(theLoc))
@@ -525,10 +525,10 @@ public class TestParser
 			failedCases.add(sb.toString());
 			return false;
 		}
-		
+
 		return true;
 	}// valPower()
-	
+
 	/** Validate a Unit Type */
 	private boolean valUnitType(ORPair orp, Unit.Type theUnitType, String tok, List failedCases)
 	{
@@ -540,7 +540,7 @@ public class TestParser
 			System.out.println("Unit Type \""+tok+"\" was not found.");
 			System.exit(1);
 		}
-		
+
 		// does tok match? if not, add to failed cases, return false
 		if(ut != theUnitType)
 		{
@@ -561,10 +561,10 @@ public class TestParser
 			failedCases.add(sb.toString());
 			return false;
 		}
-		
+
 		return true;
 	}// valPower()
-	
+
 	/** Validate a Boolean */
 	private boolean valBoolean(ORPair orp, boolean theBoolean, String tok, List failedCases)
 	{
@@ -584,7 +584,7 @@ public class TestParser
 			System.out.println("Boolean value \""+tok+"\" must be \"true\" or \"false\".");
 			System.exit(1);
 		}
-		
+
 		// does tok match? if not, add to failed cases, return false
 		if(bool != theBoolean)
 		{
@@ -605,19 +605,19 @@ public class TestParser
 			failedCases.add(sb.toString());
 			return false;
 		}
-		
+
 		return true;
-	}// valPower()	
-	
-	
-	
-	
-	
+	}// valPower()
+
+
+
+
+
 	/** Get tokens from an order result (non-failure) as a string array */
 	private String[] getORPTokens(String in)
 	{
 		ArrayList al = new ArrayList(10);
-		
+
 		// parse result.
 		// format is like xxxx(a, b, c, d)
 		StringTokenizer st = new StringTokenizer(in, "(),;");
@@ -625,22 +625,22 @@ public class TestParser
 		{
 			al.add(st.nextToken().trim());
 		}
-		
+
 		return (String[]) al.toArray(new String[al.size()]);
 	}// getORPTokens()
-	
 
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	/** Setup the variant, using variantName, which shouldn't be null */
 	private void setupVariant()
 	{
 		assert(variantName != null);
-		
-		// get default variant directory. 
+
+		// get default variant directory.
 		File defaultVariantSearchDir = null;
 		if(System.getProperty("user.dir") == null)
 		{
@@ -650,12 +650,12 @@ public class TestParser
 		{
 			defaultVariantSearchDir = new File(System.getProperty("user.dir"), VARIANT_DIR );
 		}
-		
+
 		try
 		{
 			// parse variants
 			VariantManager.init(new File[]{defaultVariantSearchDir}, false);
-			
+
 			// load the default variant (Standard)
 			// error if it cannot be found!!
 			Variant variant = VariantManager.getVariant(variantName, VariantManager.VERSION_NEWEST);
@@ -664,12 +664,12 @@ public class TestParser
 				System.out.println("ERROR: cannot find variant: "+variantName);
 				System.exit(1);
 			}
-			
+
 			// create the world
 			world = WorldFactory.getInstance().createWorld(variant);
 			turnState = world.getLastTurnState();
 			map = world.getMap();
-			
+
 			// set the RuleOptions in the World (this is normally done
 			// by the GUI)
 			world.setRuleOptions(RuleOptions.createFromVariant(variant));
@@ -681,7 +681,7 @@ public class TestParser
 			e.printStackTrace();
 			System.exit(1);
 		}
-		
+
 		// clear positions in this world
 		Position pos = turnState.getPosition();
 		Province[] provs = pos.getProvinces();
@@ -690,15 +690,15 @@ public class TestParser
 			pos.setUnit(provs[i], null);
 			pos.setDislodgedUnit(provs[i], null);
 		}
-		
+
 		System.out.println("Variant \""+variantName+"\" loaded successfully.");
-		
+
 		// setup the order parser
 		op = OrderParser.getInstance();
 		System.out.println("OrderParser created.");
 	}// setupVariant()
-	
-	
+
+
 	/**
 	*	A bunch of DefineState orders used to set unit positions
 	*	for subsequent order processing.
@@ -708,9 +708,9 @@ public class TestParser
 		assert(nonDislodged != null);
 		assert(dislodged != null);
 		assert(turnState != null);
-		
+
 		Position pos = turnState.getPosition();
-		
+
 		int count = 0;
 		Iterator iter = nonDislodged.iterator();
 		while(iter.hasNext())
@@ -723,8 +723,8 @@ public class TestParser
 			count++;
 		}
 		System.out.println(count+" (non-dislodged) unit positions set.");
-		
-		
+
+
 		count = 0;
 		iter = dislodged.iterator();
 		while(iter.hasNext())
@@ -738,13 +738,13 @@ public class TestParser
 		}
 		System.out.println(count+" (dislodged) unit positions set.");
 	}// setupPositions()
-	
-	
+
+
 	/** Parse the Case file. */
 	private void parseCaseFile(File caseFile)
 	{
 		LineNumberReader lnr = null;
-		
+
 		try
 		{
 			boolean setupDone = false;
@@ -753,27 +753,27 @@ public class TestParser
 			ORPair currentCase = null;
 			List posList = null;
 			List dislodgedPosList = null;
-			
+
 			lnr = new LineNumberReader(new BufferedReader(new FileReader(caseFile)));
 			String line = lnr.readLine();
 			while(line != null)
 			{
 				// trim line
 				line = line.trim();
-				
+
 				// cutoff any text after first '#'
 				final int cidx = line.indexOf('#');
 				if(cidx != -1)
 				{
 					line = line.substring(0, cidx).trim();
 				}
-				
+
 				// allow blank/empty/only-whitespace lines (but don't parse them)
 				if(line.length() > 0)
 				{
 					// cut off any text after the first '#'
-					
-					
+
+
 					String key = getKeyword(line);
 					if(key == KEY_VARIANT)
 					{
@@ -781,7 +781,7 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "VARIANT already defined.");
 						}
-						
+
 						variantName = getPostKeywordText(line).trim();
 						setupVariant();
 					}
@@ -791,7 +791,7 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "SETUP block already defined.");
 						}
-						
+
 						accum = new ArrayList(50);
 					}
 					else if(key == KEY_END)
@@ -800,7 +800,7 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "END line must be after a SETUP line or SETUPDISLODGED line.");
 						}
-						
+
 						// send accumulated line to setup parser
 						if(posList == null)
 						{
@@ -810,7 +810,7 @@ public class TestParser
 						{
 							dislodgedPosList = accum;
 						}
-						
+
 						// if we are done, mark the setupDone flag
 						// and setup the positions.
 						if(posList != null && dislodgedPosList != null)
@@ -825,12 +825,12 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "SETUPDISLODGED must be after a SETUP block.");
 						}
-						
+
 						if(dislodgedPosList != null)
 						{
 							lnrErrorExit(lnr, "SETUPDISLODGED block already defined.");
 						}
-						
+
 						accum = new ArrayList(50);
 					}
 					else if(key == KEY_ORDER)
@@ -839,12 +839,12 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "ORDER (or ORD) keyword must be after SETUP block complete.");
 						}
-						
+
 						if(currentCase != null)
 						{
 							lnrErrorExit(lnr, "ORDER (or ORD) keyword must precede and be paired with a RESULT (or RES) line.");
 						}
-						
+
 						currentCase = new ORPair();
 						currentCase.setOrder( getPostKeywordText(line) );
 						currentCase.setLineNumber( lnr.getLineNumber() );
@@ -855,12 +855,12 @@ public class TestParser
 						{
 							lnrErrorExit(lnr, "RESULT (or RES) keyword must be after SETUP block complete.");
 						}
-						
+
 						if(currentCase == null)
 						{
 							lnrErrorExit(lnr, "RESULT (or RES) line must follow and be paired with an ORDER (or ORD) line.");
 						}
-						
+
 						currentCase.setResult( getPostKeywordText(line) );
 						cases.add(currentCase);
 						currentCase = null;
@@ -885,7 +885,7 @@ public class TestParser
 						}
 					}
 				}
-				
+
 				line = lnr.readLine();
 			}
 		}
@@ -902,15 +902,15 @@ public class TestParser
 				try { lnr.close(); } catch(Exception e) {}
 			}
 		}
-		
+
 		System.out.println("Case file succesfully parsed.");
 		System.out.println(cases.size()+" order/result pairs read.");
 	}// parseCaseFile()
-	
-	
-	
-	/** 
-	*	Gets if lien starts with keyword (case-insensitive); if not, returns	
+
+
+
+	/**
+	*	Gets if lien starts with keyword (case-insensitive); if not, returns
 	*	null; if so, returns normalized keyword
 	*
 	*/
@@ -924,11 +924,11 @@ public class TestParser
 				return KEYWORDS[i][1];
 			}
 		}
-		
+
 		return null;
 	}// getKeyword()
-	
-	
+
+
 	/** Gets text after a keyword, ignoring comments, "" if no text found */
 	private static String getPostKeywordText(String line)
 	{
@@ -938,11 +938,11 @@ public class TestParser
 		{
 			return "";
 		}
-		
+
 		return line.substring(idx+1);
 	}// getPostKeywordText()
-	
-	
+
+
 	/** Strips the comment after a line (starts with #) if present. */
 	private static String stripComment(String line)
 	{
@@ -951,14 +951,14 @@ public class TestParser
 		{
 			return line.substring(0, idx);
 		}
-		
+
 		return line;
 	}// stripComment()
-	
-	
-	/** 
-	*	Gets first index of a whitespace character, and returns it's 
-	* 	index of -1 if not found 
+
+
+	/**
+	*	Gets first index of a whitespace character, and returns it's
+	* 	index of -1 if not found
 	*/
 	private static int getWSIndex(String in)
 	{
@@ -969,21 +969,21 @@ public class TestParser
 				return i;
 			}
 		}
-		
+
 		return -1;
 	}// getWSIndex()
-	
-	
+
+
 	private void lnrErrorExit(LineNumberReader lnr, String msg)
 	{
 		System.out.println("ERROR: line: "+lnr.getLineNumber());
 		System.out.println("SETUP block already defined.");
 		System.exit(1);
 	}// lnrErrorExit()
-	
-	
-	/** 
-	*	Parse order as a DefineState order, and if it fails, 
+
+
+	/**
+	*	Parse order as a DefineState order, and if it fails,
 	*	error exit.
 	*/
 	private DefineState parseDSOrder(String line)
@@ -994,15 +994,15 @@ public class TestParser
 		{
 			// no guessing (but not locked); we must ALWAYS specify the power.
 			Order o = op.parse(OrderFactory.getDefault(), line, null, turnState, false, false);
-			
+
 			if(o instanceof DefineState)
 			{
 				// we just want to check if the DefineState order does not have
 				// an undefined coast for a fleet unit.
 				Location newLoc = o.getSource().getValidatedSetup(o.getSourceUnitType());
-				
+
 				// create a new DefineState with a validated loc
-				return OrderFactory.getDefault().createDefineState(o.getPower(), 
+				return OrderFactory.getDefault().createDefineState(o.getPower(),
 					newLoc, o.getSourceUnitType());
 			}
 			else
@@ -1016,27 +1016,27 @@ public class TestParser
 			System.out.println("      line: "+line);
 			System.out.println("parseOrder() OrderException: "+e);
 			System.exit(1);
-		}	
-		
+		}
+
 		// shouldn't occur.
 		assert(false);
 		return null;
 	}// parseDSOrder()
-	
-	
-	/** 
+
+
+	/**
 	*	Order-Result pair class
 	*	Pairs an Order with its Result
-	*	
+	*
 	*/
 	private class ORPair
 	{
 		private String order;
 		private String result;
 		private int line;
-		
+
 		public ORPair() {}
-		
+
 		public String getOrder()	{ return order; }
 		public String getResult()	{ return result; }
 		public int getLineNumber()	{ return line; }
@@ -1044,11 +1044,7 @@ public class TestParser
 		public void setResult(String s) { result = s; }
 		public void setLineNumber(int i) { line = i; }
 	}
-	
-	
-	
+
+
+
 }// class TestParser
-
-
-
-
