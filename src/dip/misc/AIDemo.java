@@ -2,10 +2,10 @@
 //  @(#)AIDemo.java		12/2003
 //
 //  Copyright 2003 Zachary DelProposto.
-//	
+//
 //  This module (AIDemo.java) is example code; all or part of this code
 //	may be freely used in your own programs without attribution and without
-//	restriction. Note that that is not the case for most other jDip source 
+//	restriction. Note that that is not the case for most other jDip source
 //	and binary modules; see their licensing information for details.
 //
 package dip.misc;
@@ -33,15 +33,15 @@ import java.io.*;
 *	<p>
 *	Normally, jDip will create a World object, which has an initial TurnState.
 *	Orders and units are added to the TurnState. When the TurnState is resolved,
-*	a new TurnState is added to the world. 
+*	a new TurnState is added to the world.
 *	<p>
 *	In our case, we will be doing things a bit differently. We are not trying to
 *	create an entire game (though we could!).
 *	<p>
 *	This demo will set up a position involving all 7 powers on a Standard map
-*	(this position is NOT the initial starting position). The goal is to find 
+*	(this position is NOT the initial starting position). The goal is to find
 *	the set of orders which will allow Germany to take the Russian province
-*	of Warsaw, which contains a supply center. We use the adjudicator to 
+*	of Warsaw, which contains a supply center. We use the adjudicator to
 *	evaluate several order sets until we find the order set that will accomplish
 *	our goal. A secondary goal is to ensure any German units don't get dislodged
 *	by Russia.
@@ -58,39 +58,42 @@ public class AIDemo
 	/** Directory name where variants are stored */
 	private static final String VARIANT_DIR	= "variants";
 	private static final String VARIANT_NAME = "Standard";
-	
-	
-	
+
+
+
 	/** Command-line entry point */
 	public static void main(String[] args)
 	throws Exception	// allow any exceptions through
 	{
 		new AIDemo();
 	}// main()
-	
-	
+
+
 	/** Create the AIDemo */
-	public AIDemo()
-	throws Exception
-	{
+	public AIDemo() throws Exception {
+
 		// create the World
 		World world = createStandardWorld();
-		
+
 		// create a position to evaluate
 		Position position = createPosition(world);
-		
+
 		// create order sets
-		createOrders(world.getMap(), position);
-		
+		// Array of List
+		List[] orderSets = createOrders(world.getMap(), position);
+
+		System.out.println("");
+		System.out.println("-----------------------------------------------------");
+
 		// evaluate order sets
-		
-		
+		evaluateOrders(world, position, orderSets);
+
 	}// AIDemo()
-	
-	
-	
-	
-	
+
+
+
+
+
 	/**
 	*	Create the World. The World, and its components, are required for
 	*	most operations by jDip.
@@ -100,7 +103,7 @@ public class AIDemo
 	{
 		// Get default variant directory, where the jDip variants are stored.
 		// This assumes the standard jdip package layout.
-		// 
+		//
 		File defaultVariantSearchDir = null;
 		if(System.getProperty("user.dir") == null)
 		{
@@ -110,16 +113,16 @@ public class AIDemo
 		{
 			defaultVariantSearchDir = new File(System.getProperty("user.dir"), VARIANT_DIR );
 		}
-		System.out.println("Variant diretory: "+defaultVariantSearchDir);
-		
+		// System.out.println("Variant diretory: "+defaultVariantSearchDir);
+
 		// Parse the variants in the variant directory/directories.
 		// if no variants are found, this will display (using a Swing dialog)
 		// an error message. The 'false' sets if we are using XML validation;
 		// we generally do not want to.
 		//
 		VariantManager.init(new File[]{defaultVariantSearchDir}, false);
-		System.out.println("VariantManager initilization complete.");
-		
+		// System.out.println("VariantManager initilization complete.");
+
 		// Load the variant (VARIANT_NAME) that we want.
 		// Throw an error if it isn't found!
 		//
@@ -128,84 +131,84 @@ public class AIDemo
 		{
 			throw new IOException("Cannot find variant "+VARIANT_NAME);
 		}
-		System.out.println("Variant "+VARIANT_NAME+" found.");
-		
+		// System.out.println("Variant "+VARIANT_NAME+" found.");
+
 		// Create the World object. The World object contains the a dip.world.Map,
 		// which contains Province and Power information, as well as TurnStates,
 		// which hold turn and Position information.
 		//
 		World newWorld = WorldFactory.getInstance().createWorld(variant);
-		System.out.println("World created!");
-		
+		// System.out.println("World created!");
+
 		// Set the RuleOptions in the World. This sets the RuleOptions to their
 		// defaults, which is usually what we want.
 		//
 		newWorld.setRuleOptions(RuleOptions.createFromVariant(variant));
-		
+
 		// This is to illustrate some features of the dip.world.Map object.
-		// 
+		//
 		Map map = newWorld.getMap();
 		Power[] powers = map.getPowers();
-		System.out.println("\nPowers in this game:");
+		// System.out.println("\nPowers in this game:");
 		for(int i=0; i<powers.length; i++)
 		{
-			System.out.println("  "+powers[i]);
+			// System.out.println("  "+powers[i]);
 		}
-		
+
 		// how do we get a specific power?
-		// 
+		//
 		Power aPower = map.getPower("france");
-		System.out.println("\ngetPower(): "+aPower);
-		System.out.println("People from "+aPower+" are called "+aPower.getAdjective());
-		
+		// System.out.println("\ngetPower(): "+aPower);
+		// System.out.println("People from "+aPower+" are called "+aPower.getAdjective());
+
 		// what about a province?
 		//
 		Province prov = map.getProvince("spa");
-		System.out.println("\nProvince testing:");
-		System.out.println("  prov full name: "+prov.getFullName());
-		System.out.println("  prov abbreviation: "+prov.getShortName());
-		System.out.println("  all TOUCHING provinces:");
+		// System.out.println("\nProvince testing:");
+		// System.out.println("  prov full name: "+prov.getFullName());
+		// System.out.println("  prov abbreviation: "+prov.getShortName());
+		// System.out.println("  all TOUCHING provinces:");
 		Location[] touchLocs = prov.getAdjacentLocations(Coast.TOUCHING);
 		for(int i=0; i<touchLocs.length; i++)
 		{
-			System.out.println("    "+touchLocs[i].getProvince());
+			// System.out.println("    "+touchLocs[i].getProvince());
 		}
-		
-		
+
+
 		// what about a Location? (A Location is a Province + a Coast)
 		//
 		Location loc1 = map.parseLocation("spa/sc");	// South Coast of Spain
 		Location loc2 = map.parseLocation("spa/nc");	// North Coast of Spain
-		System.out.println("\nLocation testing:");
-		System.out.println("  "+loc1.toLongString()+" and "+loc2.toLongString());
-		System.out.println("  same location?: "+loc1.equals(loc2));
-		System.out.println("  same province?: "+loc1.isProvinceEqual(loc2));
-		System.out.println("  adjacent? "+loc1.isAdjacent(loc2));
-		System.out.println("  adjacent Locations to "+loc1.toString()+":");
+		// System.out.println("\nLocation testing:");
+		// System.out.println("  "+loc1.toLongString()+" and "+loc2.toLongString());
+		// System.out.println("  same location?: "+loc1.equals(loc2));
+		// System.out.println("  same province?: "+loc1.isProvinceEqual(loc2));
+		// System.out.println("  adjacent? "+loc1.isAdjacent(loc2));
+		// System.out.println("  adjacent Locations to "+loc1.toString()+":");
 		Location[] adjLocs = loc1.getProvince().getAdjacentLocations(loc1.getCoast());
 		for(int i=0; i<adjLocs.length; i++)
 		{
-			System.out.println("    "+adjLocs[i]);
+			// System.out.println("    "+adjLocs[i]);
 		}
-		
-		// a test: the province "spa" and the location "spa/sc" as well as 
+
+		// a test: the province "spa" and the location "spa/sc" as well as
 		// "spa/nc" all share the EXACT SAME Province reference. This is not true
-		// of Locations, however (why? because to do that, Locations would have 
+		// of Locations, however (why? because to do that, Locations would have
 		// to be interned like String objects can be).
 		//
 		// It is always safe to use equals() if you are not sure.
 		//
-		System.out.println("\nEqualities:");
-		System.out.println("   loc1 and prov: same province? "+loc1.isProvinceEqual(prov));
-		System.out.println("   loc2 and prov: same province? "+(loc2.getProvince() == prov));	// referential equality!
-		
+		// System.out.println("\nEqualities:");
+		// System.out.println("   loc1 and prov: same province? "+loc1.isProvinceEqual(prov));
+		// System.out.println("   loc2 and prov: same province? "+(loc2.getProvince() == prov));	// referential equality!
+
 		return newWorld;
 	}// createStandardWorld()
-	
-	
+
+
 	/**
 	*	Set up some positions (via a TurnState and a Position object) so that
-	*	we can evaluate orders. This uses the Position within the very first 
+	*	we can evaluate orders. This uses the Position within the very first
 	*	TurnState object in the World. In this case, the very first TurnState
 	*	object in the Standard variant has:
 	*	<ul>
@@ -218,10 +221,10 @@ public class AIDemo
 	{
 		// get the initial position
 		Position pos = w.getLastTurnState().getPosition();
-		
+
 		// a Map reference, for convenience
 		final Map map = w.getMap();
-		
+
 		// All Power and Province are immutable references. Thus they must
 		// be obtained from the Map object.
 		//
@@ -232,7 +235,7 @@ public class AIDemo
 		Unit u = new Unit(germany, Unit.Type.ARMY);
 		u.setCoast(Coast.LAND);		// Army units always must be in Coast.LAND (== Coast.NONE)
 		pos.setUnit(map.getProvince("pru"), u);
-		
+
 		// NOTE: it would be VERY BAD to use the same unit we created above, and also
 		// insert it in another province. Why? Because when a one province has a unit
 		// moved or destroyed, the other province would have the same. So don't do that.
@@ -240,23 +243,23 @@ public class AIDemo
 		u = new Unit(germany, Unit.Type.ARMY);
 		u.setCoast(Coast.LAND);
 		pos.setUnit(map.getProvince("sil"), u);
-		
+
 		u = new Unit(germany, Unit.Type.ARMY);
 		u.setCoast(Coast.LAND);
 		pos.setUnit(map.getProvince("gal"), u);
-		
+
 		// set extra Russian units
 		//
 		Power russia = map.getPower("russia");
 		u = new Unit(russia, Unit.Type.ARMY);
 		u.setCoast(Coast.LAND);
 		pos.setUnit(map.getProvince("lvn"), u);
-		
-		System.out.println("\nInitial position created.");
+
+		// System.out.println("\nInitial position created.");
 		return pos;
 	}// createPosition()
-	
-	
+
+
 	/**
 	*	Given the position that we created, make several different sets of
 	*	orders that we can check to see which is best.
@@ -270,21 +273,21 @@ public class AIDemo
 	{
 		// get the OrderFactory. The default order factory is OrderFactory.getDefault().
 		OrderFactory orderFactory = OrderFactory.getDefault();
-		
+
 		// power constants (note: we could have set these globally, as they
-		// are the same, referentially, as when we obtained them in 
+		// are the same, referentially, as when we obtained them in
 		// createPosition()
 		//
 		final Power russia = map.getPower("russia");
 		final Power germany = map.getPower("germany");
-		
+
 		// Russian Orders
 		// ==============
 		// 	A war S lvn-pru
 		// 	A lvn-pru
 		//	A mos-lvn
 		List russianOrders = new ArrayList();
-		russianOrders.add(orderFactory.createSupport(russia, 
+		russianOrders.add(orderFactory.createSupport(russia,
 						  makeLocation(pos, map.getProvince("war")),
 						  Unit.Type.ARMY,
 						  makeLocation(pos, map.getProvince("lvn")),
@@ -302,12 +305,12 @@ public class AIDemo
 						  Unit.Type.ARMY,
 						  makeLocation(pos, map.getProvince("lvn"))
 						  ));
-		
-		
+
+
 		// we're just making 2 sets of german orders
 		//
 		List[] germanOrders = new List[2];
-		
+
 		// German Orders: 1
 		// ================
 		// 	A pru-war
@@ -321,7 +324,7 @@ public class AIDemo
 						  	makeLocation(pos, map.getProvince("war"))
 						  	));
 		germanOrders[0].add(orderFactory.createSupport(
-							germany, 
+							germany,
 						  	makeLocation(pos, map.getProvince("sil")),
 						  	Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("pru")),
@@ -330,7 +333,7 @@ public class AIDemo
 						  	makeLocation(pos, map.getProvince("war"))
 						  	));
 		germanOrders[0].add(orderFactory.createSupport(
-							germany, 
+							germany,
 						  	makeLocation(pos, map.getProvince("gal")),
 						  	Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("pru")),
@@ -338,8 +341,8 @@ public class AIDemo
 							Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("war"))
 						  	));
-						  
-		
+
+
 		// German Orders: 2
 		// ================
 		// 	A pru S A sil-war
@@ -347,7 +350,7 @@ public class AIDemo
 		//	A gal S A sil-war
 		germanOrders[1] = new ArrayList();
 		germanOrders[1].add(orderFactory.createSupport(
-							germany, 
+							germany,
 						  	makeLocation(pos, map.getProvince("pru")),
 						  	Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("sil")),
@@ -362,7 +365,7 @@ public class AIDemo
 							makeLocation(pos, map.getProvince("war"))
 							));
 		germanOrders[1].add(orderFactory.createSupport(
-							germany, 
+							germany,
 							makeLocation(pos, map.getProvince("gal")),
 						  	Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("sil")),
@@ -370,8 +373,8 @@ public class AIDemo
 							Unit.Type.ARMY,
 						  	makeLocation(pos, map.getProvince("war"))
 						  	));
-		
-		
+
+
 		// create combined orders sets for all powers
 		//
 		List[] orderLists = new List[2];
@@ -381,40 +384,103 @@ public class AIDemo
 			orderLists[i].addAll(russianOrders);
 			orderLists[i].addAll(germanOrders[i]);
 		}
-		
-		System.out.println("Created "+orderLists.length+" sets of orders to evaluate.");
-		
+
+		System.out.println("");
+		System.out.println("Created "+orderLists.length+" sets of orders to evaluate :");
+		System.out.println("");
+
+		for(int i=0; i < orderLists.length; i++)
+			System.out.println(orderLists[i]);
+
 		return orderLists;
 	}// createOrders()
-	
-	
+
+
 	/** Make a Location for a Unit */
 	private Location makeLocation(Position pos, Province prov)
 	{
 		return new Location(prov, pos.getUnit(prov).getCoast());
 	}// makeLocation()
-	
-	
+
+
 	/**
-	*	Evaluate orders, stopping when we have reached our goal 
+	*	Evaluate orders, stopping when we have reached our goal
 	*	(occupying Warsaw).
 	*	<p>
 	*	Note that there are many ways to evaluate the success of an order set.
 	*	One method is to use the Position object, and check where units are.
 	*	Another method is to look at the order results via TurnState.getResultList().
 	*	Iterating through the OrderResults, once can determine which orders are
-	*	successful and (if adjudicator statistical reporting is enabled) the 
+	*	successful and (if adjudicator statistical reporting is enabled) the
 	*	attack:defense statistics involved).
 	*/
-	private void evaluateOrders(World world, Position position, List[] orderSets)
-	{
+	private void evaluateOrders(World world, Position position, List[] orderSets) {
 		/*
 			we will evaluate by finding the BEST order that takes the sc
 			(first check via hasUnit())
-			
+
 			then the one with the most attack strength
-			
 		*/
-		
+
+		Map map = world.getMap();
+		final Power russia = map.getPower("russia");
+		final Power germany = map.getPower("germany");
+
+		// Get initial turnstate (and only one here)
+		TurnState initialTurnState = world.getInitialTurnState();
+
+		// Iterating through the order sets
+		for(int i=0; i < orderSets.length; i++) {
+
+			System.out.println("");
+			System.out.println("Evaluating order set number " + i + " ...");
+
+			ArrayList germanOrders = new ArrayList();
+			ArrayList russianOrders = new ArrayList();
+
+			Iterator iterator = orderSets[i].iterator();
+
+			// Separating orders according to their Power
+      while (iterator.hasNext()) {
+				Orderable order = (Orderable)iterator.next();
+				if(order.getPower().getName().equals(germany.getName())) {
+					germanOrders.add(order);
+				} else {
+					russianOrders.add(order);
+				}
+
+      }
+			// Setting orders to the TurnState
+			initialTurnState.setOrders(germany, germanOrders);
+			// initialTurnState.setOrders(russia, russianOrders);
+
+			// Orders resolution (adjudication)
+			System.out.println("");
+			System.out.println("Turn resolution ...");
+			StdAdjudicator stdJudge = new StdAdjudicator(OrderFactory.getDefault(), initialTurnState);
+			stdJudge.setStatReporting(true);		// report order statistics
+			stdJudge.setPowerOrderChecking(true); 	// check for cheats & bugs
+			stdJudge.process();
+
+			// Print if the turn is resolved
+			System.out.println("");
+			System.out.print("The turn is resolved : ");
+			System.out.println(initialTurnState.isResolved());
+
+			// Orders results
+			// System.out.println("");
+			// System.out.println("Results :");
+			// List resultList = initialTurnState.getResultList();
+			// System.out.println(resultList);
+
+			// Clearing orders for the next set
+			initialTurnState.clearAllOrders();
+
+			// Checking if there is a unit on the Province of Warsaw
+			//System.out.println(position.hasUnit(map.getProvince("war")));
+
+		}
+
 	}// evaluateOrders()
+
 }// class AIDemo
