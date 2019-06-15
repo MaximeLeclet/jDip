@@ -281,6 +281,8 @@ public class AIDemo
 		final Power russia = map.getPower("russia");
 		final Power germany = map.getPower("germany");
 
+		
+
 		// Russian Orders
 		// ==============
 		// 	A war S lvn-pru
@@ -389,8 +391,10 @@ public class AIDemo
 		System.out.println("Created "+orderLists.length+" sets of orders to evaluate :");
 		System.out.println("");
 
-		for(int i=0; i < orderLists.length; i++)
+		for(int i=0; i < orderLists.length; i++) {
+			System.out.println("");
 			System.out.println(orderLists[i]);
+		}
 
 		return orderLists;
 	}// createOrders()
@@ -425,59 +429,95 @@ public class AIDemo
 		Map map = world.getMap();
 		final Power russia = map.getPower("russia");
 		final Power germany = map.getPower("germany");
+		Province warsaw = map.getProvince("war");
+		OrderFactory orderFactory = OrderFactory.getDefault();
 
 		// Get initial turnstate (and only one here)
-		TurnState initialTurnState = world.getInitialTurnState();
+		TurnState turnState = world.getInitialTurnState();
+
+		StdAdjudicator stdJudge = new StdAdjudicator(orderFactory, turnState);
+
+		// System.out.println("");
+		// System.out.println("Initial turn state : " + turnState.getPhase().getPhaseType());
+
+		System.out.println("");
+		// position.setUnit(warsaw, null);
+		System.out.print("At the beginning, Warsaw is ");
+
+		if(position.hasUnit(warsaw)) {
+			System.out.println("occupied by " + position.getUnit(warsaw).getPower().getName());
+		} else {
+			System.out.println("neutral");
+		}
+
+		System.out.println("");
+		System.out.println("------------------------");
 
 		// Iterating through the order sets
 		for(int i=0; i < orderSets.length; i++) {
-
+			// Printing infos about set number
 			System.out.println("");
 			System.out.println("Evaluating order set number " + i + " ...");
 
+			// Building orders according to their Power
 			ArrayList germanOrders = new ArrayList();
 			ArrayList russianOrders = new ArrayList();
-
 			Iterator iterator = orderSets[i].iterator();
-
-			// Separating orders according to their Power
       while (iterator.hasNext()) {
 				Orderable order = (Orderable)iterator.next();
 				if(order.getPower().getName().equals(germany.getName())) {
+					// System.out.println("From " + order.getSource().toLongString() + " "
+					// 	+ order.getFullName() + " " + order.toString());
 					germanOrders.add(order);
 				} else {
 					russianOrders.add(order);
 				}
-
       }
+
 			// Setting orders to the TurnState
-			initialTurnState.setOrders(germany, germanOrders);
-			// initialTurnState.setOrders(russia, russianOrders);
+			turnState.setOrders(germany, germanOrders);
+			//turnState.setOrders(russia, russianOrders);
 
 			// Orders resolution (adjudication)
 			System.out.println("");
 			System.out.println("Turn resolution ...");
-			StdAdjudicator stdJudge = new StdAdjudicator(OrderFactory.getDefault(), initialTurnState);
-			stdJudge.setStatReporting(true);		// report order statistics
-			stdJudge.setPowerOrderChecking(true); 	// check for cheats & bugs
+			// Report order statistics
+			stdJudge.setStatReporting(true);
+			// Check for cheats & bugs
+			// stdJudge.setPowerOrderChecking(true);
 			stdJudge.process();
 
-			// Print if the turn is resolved
-			System.out.println("");
-			System.out.print("The turn is resolved : ");
-			System.out.println(initialTurnState.isResolved());
-
 			// Orders results
-			// System.out.println("");
-			// System.out.println("Results :");
-			// List resultList = initialTurnState.getResultList();
+			// Parcourir les resultats et regarder si l'allemagne a plus de provinces qu'avant ///////////////////////////////////////////
+			System.out.println("");
+			System.out.print("Results : ");
+			List resultList = turnState.getResultList();
 			// System.out.println(resultList);
 
-			// Clearing orders for the next set
-			initialTurnState.clearAllOrders();
+			// check if the SC is now germany
+			// Evaluate the orders efficiency by checking the unit on Warsaw
+			if(position.hasUnit(warsaw)) {
+				Unit warsawUnit = position.getUnit(warsaw);
+				Power warsawPower = warsawUnit.getPower();
+				System.out.println("Warsaw is occupied by " + warsawPower.getName());
+			} else {
+				System.out.println("Warsaw is neutral");
+			}
 
-			// Checking if there is a unit on the Province of Warsaw
-			//System.out.println(position.hasUnit(map.getProvince("war")));
+			// get a new turnstate
+			stdJudge = new StdAdjudicator(orderFactory, stdJudge.getNextTurnState()); // Retreat phase
+			stdJudge.process();
+			turnState = stdJudge.getNextTurnState();
+			stdJudge = new StdAdjudicator(orderFactory, turnState); // Move phase
+
+			System.out.println("");
+			System.out.println("-------------------");
+
+			// System.out.println("");
+			// System.out.println("New turn state : " + turnState.getPhase().getPhaseType());
+
+			// geneate new random orders (here iterate next for turn)
+			// restart
 
 		}
 
